@@ -1,0 +1,57 @@
+
+Query 1: Which customers are the 20 highest spenders on music
+
+SELECT K.CustomerId , SUM(H.Quantity* H.UnitPrice) Money FROM  [Track] D 
+JOIN Genre E ON E.GenreId = D.GenreId
+JOIN Album F ON F.AlbumId = D.AlbumId
+JOIN Artist G ON G.ArtistId = F.ArtistId
+JOIN InvoiceLine H ON H.TrackId = D.TrackId
+JOIN Invoice J ON J.InvoiceId = H.InvoiceId
+JOIN Customer K ON K.CustomerId = J.CustomerId
+GROUP BY K.CustomerId ,G.name
+ORDER BY Money DESC
+Limit 20
+
+Query 2: Countries along with the top customer and how much they spent.
+
+SELECT DISTINCT GG.BillingCountry,  CustomerId,[FirstName], [LastName], GG.PurchaseAmount FROM ( 
+SELECT EE.BillingCountry, MAX(EE.PurchaseAmount) PurchaseAmount FROM (
+SELECT BillingCountry, CustomerId, [FirstName], [LastName], MAX(Purchases) PurchaseAmount FROM (
+SELECT A.BillingCountry, E.CustomerId, [FirstName], [LastName], SUM(quantity*B.UnitPrice) Purchases FROM [Invoice] A
+JOIN InvoiceLine B ON B.InvoiceId = A.InvoiceId 
+JOIN Track C ON C.TrackId = B.TrackId
+JOIN Customer E ON E.CustomerId = A.CustomerId
+GROUP BY A.BillingCountry, E.CustomerId,FirstName, LastName ) DD
+Group BY Billingcountry, CustomerId,FirstName, LastName  ) EE
+GROUP BY EE.BillingCountry)  GG 
+JOIN (SELECT BillingCountry, CustomerId,FirstName, LastName, MAX(Purchases) PurchaseAmount FROM (
+SELECT A.BillingCountry, E.CustomerId, FirstName, LastName, SUM(quantity*B.UnitPrice) Purchases FROM [Invoice] A
+JOIN InvoiceLine B ON B.InvoiceId = A.InvoiceId 
+JOIN Track C ON C.TrackId = B.TrackId
+JOIN Customer E ON E.CustomerId = A.CustomerId
+GROUP BY A.BillingCountry, E.CustomerId,[FirstName], [LastName]) DD
+Group BY Billingcountry, CustomerId,[FirstName], [LastName]) FF ON GG.Billingcountry=FF.BillingCountry AND GG.PurchaseAmount=FF.PurchaseAmount
+ORDER BY GG.PurchaseAmount desc
+
+
+Query 3: Top 20 albums with track lengths greater than the average track length.
+
+
+Select B.Title, A.Albumid, COUNT(trackid) from (
+SELECT trackid, name, Albumid, Milliseconds FROM Track
+WHERE Milliseconds>(SELECT AVG([Milliseconds]) FROM Track )) A
+JOIN [dbo].[Album] B ON A.Albumid=B.Albumid
+Group by B.Title, A.Albumid
+Order by Count(*) desc
+Limit 20
+
+
+Query 4: What’s the price of each Playlist?
+
+
+SELECT  PlaylistId
+  ,Round(SUM(A.TrackId*B.UnitPrice),2) PlaylistPrice
+  FROM PlaylistTrack A
+  JOIN InvoiceLine B ON A.TrackId=B.TrackId
+  GROUP BY PlaylistId
+  ORDER BY SUM(A.TrackId*B.UnitPrice) DESC
